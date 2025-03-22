@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script> -->
+
+    <title>Bezier curves</title>
+  </head>
+  <body>
+    <h1>Bezier's in Shock</h1>
+
+    <section id="home">
+      <div class="input">
+        <div class="input-group" id="home-input">
+          <label for="unit-count">Units count:</label>
+          <input type="number" id="unit-count" />
+        </div>
+        <p class="error-message" id="error-message-unit"></p>
+      </div>
+      <button id="create-coords-but" onclick="CreateCoordsBut()">
+        Create coord system
+      </button>
+    </section>
+
+    <section id="work">
+      <div id="for-canvas">
+        <canvas id="myCanvas"></canvas>
+        <div>
+          <button id="clear-all-but" onclick="ClearAllBut()">Clear all</button>
+          <button id="see-curve-but" onclick="SeeCurveBut()">See curve</button>
+        </div>
+        <div class="modal-overlay-canvas">
+          <div class="curve-output">
+            <div class="curve-output-header">
+              <h3>Bezier curve</h3>
+              <button class="output-close" onclick="OutputCanvasClose()">
+                <span>+</span>
+              </button>
+            </div>
+            <canvas id="seeCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div id="control-container">
+        <h2>Bezier curve</h2>
+        <div class="curve-editor">
+          <div class="input-group">
+            <label for="curve-color">Curve color:</label>
+            <input type="color" id="curve-color" />
+          </div>
+          <hr />
+          <br />
+          <div class="input-method-group">
+            <h3>Method of drawing:</h3>
+            <div class="drawing-method">
+              <div class="checkbox-method">
+                <input type="checkbox" id="params-method" checked />
+                <label for="params-method">Params</label>
+              </div>
+              <div class="checkbox-method">
+                <input type="checkbox" id="recursive-method" />
+                <label for="recursive-method">Recursive</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="points-container">
+          <div class="points-header">
+            <h3>Points</h3>
+            <button id="add-point-but" onclick="AddNewBut()">+</button>
+          </div>
+          <ul class="points-list"></ul>
+        </div>
+
+        <div id="addpoint-container">
+          <div class="addpoint-header">
+            <h3>Add point</h3>
+            <button class="close-addpoint-but" onclick="CloseAddPointBut()">
+              <span>+</span>
+            </button>
+          </div>
+
+          <div class="addpoint-data">
+            <form id="point">
+              <div>
+                <div class="coords-input-group">
+                  <label for="x-field">Coords: X:</label>
+                  <input type="number" id="x-field" />
+                  <label for="Y-field">Y:</label>
+                  <input type="number" id="y-field" />
+                </div>
+                <p class="error-message" id="error-message-point"></p>
+              </div>
+              <div class="input-group">
+                <label for="point-color">Point color:</label>
+                <input type="color" id="point-color" />
+              </div>
+            </form>
+          </div>
+
+          <div class="addpoint-buts">
+            <button class="cancel-add-but" onclick="CloseAddPointBut()">
+              Cancel
+            </button>
+            <button class="create-point-but">Create</button>
+          </div>
+        </div>
+
+        <div class="options-container">
+          <div class="options-header" onclick="SealOptions()">
+            <h3>Options</h3>
+            <button class="button-seal">
+              <img src="\Images\hamburger.png" />
+            </button>
+          </div>
+          <div class="options-data">
+            <div class="options-item">
+              <p class="info-text">Show points in:</p>
+              <form id="optionY">
+                <div class="diapason-input-group">
+                  <label>Diapason Y:</label>
+                  <p>[</p>
+                  <input type="number" id="diapasonY-start" />
+                  <p>;</p>
+                  <input type="number" id="diapasonY-end" />
+                  <p>]</p>
+                </div>
+                <p class="error-message" id="error-message-optionY"></p>
+              </form>
+              <button class="show-points-y-but" onclick="ShowPointsYBut()">
+                Show
+              </button>
+            </div>
+            <div class="options-item">
+              <p class="info-text">Calculate polinoms b<sub>in</sub>(t):</p>
+              <form id="optionPolinom">
+                <div class="diapason-input-group">
+                  <label>Diapason i:</label>
+                  <p>[</p>
+                  <input type="number" id="diapasonI-start" />
+                  <p>;</p>
+                  <input type="number" id="diapasonI-end" />
+                  <p>]</p>
+                </div>
+                <div class="diapason-input-group">
+                  <label>Diapason t:</label>
+                  <p>[</p>
+                  <input type="number" id="diapasonT-start" />
+                  <p>;</p>
+                  <input type="number" id="diapasonT-end" />
+                  <p>]</p>
+                </div>
+                <p class="error-message" id="error-message-optionPolinom"></p>
+              </form>
+              <button
+                class="calculate-polinoms-but"
+                onclick="CalculatePolinomsBut()"
+              >
+                Calculate
+              </button>
+            </div>
+          </div>
+          <div class="modal-overlay">
+            <div class="options-output">
+              <div class="options-output-header">
+                <h3>Output info</h3>
+                <button class="output-close" onclick="OutputClose()">
+                  <span>+</span>
+                </button>
+              </div>
+              <div class="options-output-data">
+                <ul id="output-list"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script src="script.js"></script>
+  </body>
+</html>
