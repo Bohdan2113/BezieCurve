@@ -891,13 +891,14 @@ function ValidateForm(formId) {
   }
 
   return true;
-}
-function FilterEmptyFields(fields) {
-  let emptyFields = [];
-  for (let i = 0; i < fields.length; i++)
-    if (!fields[i].value.trim()) emptyFields.push(fields[i]);
 
-  return emptyFields;
+  function FilterEmptyFields(fields) {
+    let emptyFields = [];
+    for (let i = 0; i < fields.length; i++)
+      if (!fields[i].value.trim()) emptyFields.push(fields[i]);
+
+    return emptyFields;
+  }
 }
 
 function checkInterval(event, errorId) {
@@ -1043,12 +1044,18 @@ function RecursiveMethod(canvas, points, width, color, tD = 0.001) {
   function Bx(points, iStart, iEnd, t) {
     if (iEnd === iStart) return ToCanvas(points[iStart].x, 0).x;
 
-    return (1 - t) * Bx(points, iStart, iEnd - 1, t) + t * Bx(points, iStart+1, iEnd, t);
+    return (
+      (1 - t) * Bx(points, iStart, iEnd - 1, t) +
+      t * Bx(points, iStart + 1, iEnd, t)
+    );
   }
   function By(points, iStart, iEnd, t) {
     if (iEnd === iStart) return ToCanvas(0, points[iStart].y).y;
 
-    return (1 - t) * By(points, iStart, iEnd - 1, t) + t * By(points, iStart+1, iEnd, t);
+    return (
+      (1 - t) * By(points, iStart, iEnd - 1, t) +
+      t * By(points, iStart + 1, iEnd, t)
+    );
   }
 }
 
