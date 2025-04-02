@@ -44,6 +44,8 @@
         </div>
       </div>
 
+      <div id="point-info-panel"></div>
+
       <div id="control-container">
         <h2>Bezier curve</h2>
         <div class="curve-editor">
@@ -119,7 +121,10 @@
           </div>
           <div class="options-data">
             <div class="options-item">
-              <p class="info-text">Show points in:</p>
+              <p class="info-text">
+                Show points in: (Will show evenly distributed points of Bezier's
+                curve in this diapason)
+              </p>
               <form id="optionY">
                 <div class="diapason-input-group">
                   <label>Diapason Y:</label>
@@ -128,6 +133,10 @@
                   <p>;</p>
                   <input type="number" id="diapasonY-end" />
                   <p>]</p>
+                </div>
+                <div class="step-input-group">
+                  <label>Count:</label>
+                  <input type="number" id="diapasonY-step" />
                 </div>
                 <p class="error-message" id="error-message-optionY"></p>
               </form>
@@ -139,7 +148,7 @@
               <p class="info-text">Calculate polinoms b<sub>in</sub>(t):</p>
               <form id="optionPolinom">
                 <div class="diapason-input-group">
-                  <label>Diapason i:</label>
+                  <label title="Point indexes">Diapason i:</label>
                   <p>[</p>
                   <input type="number" id="diapasonI-start" />
                   <p>;</p>
@@ -147,11 +156,11 @@
                   <p>]</p>
                 </div>
                 <div class="diapason-input-group">
-                  <label>Diapason t:</label>
+                  <label title="Step of t = 0,1">Diapason t:</label>
                   <p>[</p>
-                  <input type="number" id="diapasonT-start" />
+                  <input type="number" id="diapasonT-start" step="0.1" />
                   <p>;</p>
-                  <input type="number" id="diapasonT-end" />
+                  <input type="number" id="diapasonT-end" step="0.1" />
                   <p>]</p>
                 </div>
                 <p class="error-message" id="error-message-optionPolinom"></p>

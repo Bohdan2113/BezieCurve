@@ -87,7 +87,7 @@ input[type="number"]:focus {
   gap: 40px;
   font-size: 30px;
   font-weight: 900;
-  display:flex;
+  display: flex;
   align-items: center;
 }
 #home-input input {
@@ -163,7 +163,7 @@ input[type="number"]:focus {
 }
 .checkbox-method {
   display: flex;
-  align-items: center;  
+  align-items: center;
   gap: 7px;
 }
 
@@ -230,7 +230,7 @@ input[type="number"]:focus {
 .points-header button:hover,
 .addpoint-header button:hover,
 .options-header button:hover,
-.output-close:hover  {
+.output-close:hover {
   background-color: #aaa;
 }
 
@@ -340,11 +340,20 @@ input[type="number"]:focus {
   align-items: center;
   gap: 5px;
 }
+.step-input-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 150px;
+  margin-top: 5px;
+}
 .diapason-input-group label,
+.step-input-group label,
 .info-text {
   font-weight: bold;
 }
-.diapason-input-group input {
+.diapason-input-group input,
+.step-input-group input {
   width: 60px;
   padding: 5px;
   font-size: 16px;
@@ -353,7 +362,8 @@ input[type="number"]:focus {
   outline: none;
   text-align: center;
 }
-.diapason-input-group input:focus {
+.diapason-input-group input:focus,
+.step-input-group input:focus {
   border-color: #007bff;
 }
 .options-item button {
@@ -445,8 +455,8 @@ input[type="number"]:focus {
   margin: 0;
 }
 .options-output-data {
-max-height:300px;
-overflow-y: auto;
+  max-height: 300px;
+  overflow-y: auto;
 }
 .options-output-data ul li {
   padding: 8px;

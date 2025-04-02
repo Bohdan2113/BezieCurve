@@ -14,29 +14,35 @@ class Point {
     return this._x;
   }
   set x(value) {
-    if (value > Point.maxX) _x = Point.maxX;
-    else if (value < Point.minY) _y = Point.minY;
+    if (value > Point.maxX) this._x = Point.maxX;
+    else if (value < Point.minX) this._y = Point.minX;
     else this._x = Math.round(value * 10) / 10;
   }
   get y() {
     return this._y;
   }
   set y(value) {
-    if (value > Point.maxY) _y = Point.maxY;
-    else if (value < Point.minX) _x = Point.minX;
+    if (value > Point.maxY) this._y = Point.maxY;
+    else if (value < Point.minY) this._x = Point.minY;
     else this._y = Math.round(value * 10) / 10;
   }
-  get info() {
+  get coords() {
     return `(X: ${this.x}, Y: ${this.y})`;
   }
 }
 
 const $ = document.querySelector.bind(document);
 const coordSystemMargin = 15;
+const maxPointsForParams = 20;
+const maxPointsForRecursive = 10;
+const deltaT = 0.01;
+
 let unitCount;
 let pointList = [];
+let curvePoints = [];
 let draggedPoint = null; // Поточна точка, яку тягнемо
 let BezierCurveMethod = ParamMethod;
+let maxPointPossible = maxPointsForParams;
 
 window.onload = function () {
   const canvas = $("#myCanvas");
@@ -49,6 +55,7 @@ window.onload = function () {
   const yField = $("#y-field");
   const diapasonYStartField = $("#diapasonY-start");
   const diapasonYEndField = $("#diapasonY-end");
+  const diapasonYStepField = $("#diapasonY-step");
   const diapasonIStartField = $("#diapasonI-start");
   const diapasonIEndField = $("#diapasonI-end");
   const diapasonTStartField = $("#diapasonT-start");
@@ -62,6 +69,7 @@ window.onload = function () {
     { field: yField, errorId: "#error-message-point" },
     { field: diapasonYStartField, errorId: "#error-message-optionY" },
     { field: diapasonYEndField, errorId: "#error-message-optionY" },
+    { field: diapasonYStepField, errorId: "#error-message-optionY" },
     { field: diapasonIStartField, errorId: "#error-message-optionPolinom" },
     { field: diapasonIEndField, errorId: "#error-message-optionPolinom" },
     { field: diapasonTStartField, errorId: "#error-message-optionPolinom" },
@@ -85,25 +93,26 @@ window.onload = function () {
 
   // Створення точок подвійним кліком
   canvas.addEventListener("dblclick", function (event) {
-    const { x, y } = ToCoord(event.clientX, event.clientY);
+    const { x, y } = ClickToCoord(event.clientX, event.clientY);
     CreatePointDoubleClick(x, y);
   });
 
   // Перетягнення точок
   canvas.addEventListener("mousedown", (event) => {
     ToogleBlocks($(".points-container"), $("#addpoint-container"));
-    draggedPoint = FindClosestPoint(ToCoord(event.clientX, event.clientY));
+    const hoverP = ClickToCoord(event.clientX, event.clientY);
+    draggedPoint = FindClosestPoint(hoverP, 0.2);
   });
   canvas.addEventListener("mousemove", (event) => {
     if (!draggedPoint) return;
 
     // Оновлюємо координати точки
-    const { x, y } = ToCoord(event.clientX, event.clientY);
+    const { x, y } = ClickToCoord(event.clientX, event.clientY);
     draggedPoint.x = x;
     draggedPoint.y = y;
     const draggedLiText = $(`#point-${draggedPoint.id} h3`);
     if (draggedLiText) {
-      draggedLiText.textContent = draggedPoint.info;
+      draggedLiText.textContent = draggedPoint.coords;
     }
 
     Redraw(); // Перемальовуємо
@@ -111,13 +120,37 @@ window.onload = function () {
   canvas.addEventListener("mouseup", () => {
     draggedPoint = null; // Відпускаємо точку
   });
+
+  // Видалення точок
   canvas.addEventListener("contextmenu", (event) => {
     event.preventDefault(); // Відміна стандартного контекстного меню
 
-    const closestPoint = FindClosestPoint(
-      ToCoord(event.clientX, event.clientY)
-    );
+    const hoverP = ClickToCoord(event.clientX, event.clientY);
+    const closestPoint = FindClosestPoint(hoverP, 0.2);
+
     DeletePoint(closestPoint.id);
+  });
+
+  // Перегляд інформації про точку
+  canvas.addEventListener("mousemove", (event) => {
+    const hoverP = ClickToCoord(event.clientX, event.clientY);
+    const closePoint = FindClosestPoint(hoverP, 0.2);
+
+    if (closePoint) {
+      const infoPanel = $("#point-info-panel");
+      const { clientX, clientY } = event; // Отримуємо координати курсора
+      infoPanel.style.display = "block";
+      infoPanel.style.position = "absolute";
+      infoPanel.style.left = `${clientX + 10}px`; // Відступ від курсора
+      infoPanel.style.top = `${clientY + 10}px`; // Відступ від курсора
+      infoPanel.innerHTML = `
+      <p>${closePoint.coords}</p>
+      `;
+    } else {
+      const infoPanel = $("#point-info-panel");
+      infoPanel.style.display = "none";
+      infoPanel.innerHTML = "";
+    }
   });
 
   // Зміна кольору кривої
@@ -135,29 +168,42 @@ function MethodChange(event) {
   const recursiveMethod = document.getElementById("recursive-method");
 
   if (event.target === paramMethod) {
-    recursiveMethod.checked = !paramMethod.checked;
+    if (pointList.length > maxPointsForParams) {
+      paramMethod.checked = false;
+      alert(
+        `Maximum points for Params method is 20 delete some points to change method for this.`
+      );
+      return;
+    }
+    paramMethod.checked = true;
+    recursiveMethod.checked = false;
   } else {
-    paramMethod.checked = !recursiveMethod.checked;
+    if (pointList.length > maxPointsForRecursive) {
+      recursiveMethod.checked = false;
+      alert(
+        `Maximum points for Recursive method is 20 delete some points to change method for this.`
+      );
+      return;
+    }
+    recursiveMethod.checked = true;
+    paramMethod.checked = false;
   }
 
-  if (paramMethod.checked) BezierCurveMethod = ParamMethod;
-  else if (recursiveMethod.checked) BezierCurveMethod = RecursiveMethod;
+  if (paramMethod.checked) {
+    BezierCurveMethod = ParamMethod;
+    maxPointPossible = maxPointsForParams;
+  } else if (recursiveMethod.checked) {
+    BezierCurveMethod = RecursiveMethod;
+    maxPointPossible = maxPointsForRecursive;
+  }
 
   Redraw();
 }
 
-function FindClosestPoint(clickP) {
-  return pointList.reduce((closestPoint, currentPoint) => {
-    const currentDistance = Math.hypot(
-      currentPoint.x - clickP.x,
-      currentPoint.y - clickP.y
-    );
-    const closestDistance = closestPoint
-      ? Math.hypot(closestPoint.x - clickP.x, closestPoint.y - clickP.y)
-      : Infinity;
-
-    return currentDistance < closestDistance ? currentPoint : closestPoint;
-  }, null);
+function FindClosestPoint(clickP, radius) {
+  return pointList.find(
+    (point) => Math.hypot(point.x - clickP.x, point.y - clickP.y) < radius
+  );
 }
 function SetRestrictionsForInput() {
   const xField = $("#x-field");
@@ -168,6 +214,7 @@ function SetRestrictionsForInput() {
   const diapasonIEndField = $("#diapasonI-end");
   const diapasonTStartField = $("#diapasonT-start");
   const diapasonTEndField = $("#diapasonT-end");
+  const diapasonYStep = $("#diapasonY-step");
 
   Point.minX = -1 * unitCount;
   Point.maxX = unitCount;
@@ -183,6 +230,8 @@ function SetRestrictionsForInput() {
   diapasonYStartField.max = unitCount;
   diapasonYEndField.min = -1 * unitCount;
   diapasonYEndField.max = unitCount;
+  diapasonYStep.min = 0;
+  diapasonYStep.max = 1 / deltaT + 1;
 
   diapasonIStartField.min = 0;
   diapasonIStartField.max = 0;
@@ -223,7 +272,7 @@ function ToCanvas(x, y) {
     y: centerY - y * unitSize,
   };
 }
-function ToCoord(x, y) {
+function ClickToCoord(x, y) {
   const canvas = $("#myCanvas");
   const rect = canvas.getBoundingClientRect();
   const sideLength = canvas.height / 2 - coordSystemMargin;
@@ -232,6 +281,16 @@ function ToCoord(x, y) {
   return {
     x: (x - rect.left - canvas.width / 2) / unitSize,
     y: (canvas.height / 2 - (y - rect.top)) / unitSize,
+  };
+}
+function CanvasToCoord(x, y) {
+  const canvas = $("#myCanvas");
+  const sideLength = canvas.height / 2 - coordSystemMargin;
+  const unitSize = sideLength / (unitCount + 1);
+
+  return {
+    x: (x - canvas.width / 2) / unitSize,
+    y: (canvas.height / 2 - y) / unitSize,
   };
 }
 
@@ -320,6 +379,10 @@ function ClearOptionYFields() {
   const diapasonYEnd = $("#diapasonY-end");
   diapasonYEnd.value = "";
   diapasonYEnd.dispatchEvent(new Event("input"));
+
+  const diapasonYCount = $("#diapasonY-step");
+  diapasonYCount.value = "";
+  diapasonYCount.dispatchEvent(new Event("input"));
 }
 function ClearOptionsPolinomsFields() {
   const diapasonIStart = $("#diapasonI-start");
@@ -579,6 +642,20 @@ function CloseAddPointBut() {
   ClearPointFields();
 }
 
+function CreateNewPoint_Base(x, y, color) {
+  if (pointList.length === maxPointPossible) {
+    alert(
+      `You can't add more points. Maximum is ${maxPointPossible}. Try to delete some points or use other method of creation.`
+    );
+    return;
+  }
+
+  let newPoint = new Point(x, y, color);
+  const ul = $(".points-list");
+  pointList.push(newPoint);
+  AddToListUL(newPoint, ul);
+  return true;
+}
 function CreatePointBut() {
   if (!ValidateForm("point")) return;
 
@@ -587,10 +664,8 @@ function CreatePointBut() {
     y: parseFloat($("#y-field").value),
     color: $("#point-color").value,
   };
-  let newPoint = new Point(pointValues.x, pointValues.y, pointValues.color);
-  const ul = $(".points-list");
-  pointList.push(newPoint);
-  AddToListUL(newPoint, ul);
+  if (!CreateNewPoint_Base(pointValues.x, pointValues.y, pointValues.color))
+    return;
 
   Redraw();
   ToogleBlocks($(".points-container"), $("#addpoint-container"));
@@ -604,10 +679,7 @@ function CreatePointDoubleClick(x, y) {
   if (x < Point.minX) x = Point.minX;
   if (y < Point.minY) y = Point.minY;
 
-  let newPoint = new Point(x, y, "#000");
-  const ul = $(".points-list");
-  pointList.push(newPoint);
-  AddToListUL(newPoint, ul);
+  if (!CreateNewPoint_Base(x, y, "#000")) return;
 
   Redraw();
   ToogleBlocks($(".points-container"), $("#addpoint-container"));
@@ -634,7 +706,7 @@ function SavePointBut(point) {
     isChanged = true;
   }
   if (isChanged) {
-    document.getElementById(`${point.id}-info`).textContent = `${point.info}`;
+    document.getElementById(`${point.id}-info`).textContent = `${point.coords}`;
     document.getElementById(
       `${point.id}-color`
     ).style.backgroundColor = `${point.color}`;
@@ -652,7 +724,7 @@ function AddToListUL(newPoint, ul) {
   li.innerHTML = `
         <div>
           <span id="${newPoint.id}-color" class="point-color" style="background-color: ${newPoint.color};"></span>
-          <h3 id="${newPoint.id}-info">${newPoint.info}</h3>
+          <h3 id="${newPoint.id}-info">${newPoint.coords}</h3>
         </div>
         <div>
           <button class="button-edit" onclick="EditPoint(${newPoint.id})">
@@ -671,6 +743,8 @@ function AddToListUL(newPoint, ul) {
   li.addEventListener("drop", handleDrop);
 
   ul.appendChild(li);
+
+  $(".points-header h3").textContent = `Points: ${pointList.length}`;
 }
 function RemovePointFromList(id) {
   const li = document.getElementById(`point-${id}`);
@@ -678,6 +752,8 @@ function RemovePointFromList(id) {
     li.remove();
   }
   pointList = pointList.filter((p) => p.id !== id);
+
+  $(".points-header h3").textContent = `Points: ${pointList.length}`;
 }
 // Переміщуємо елемент
 function handleDragStart(event) {
@@ -715,7 +791,7 @@ function handleDrop(event) {
       (p) => parseInt(dropId.match(/\d+$/)[0], 10) === p.id
     );
     const [movedElement] = pointList.splice(draggedIndex, 1); // Вирізаємо елемент
-    pointList.splice(dropIndex, 0, movedElement); // Вставляємо на нове місце
+    pointList.splice(dropIndex + 1, 0, movedElement); // Вставляємо на нове місце
 
     // Перемальовуємо полотно
     Redraw();
@@ -752,27 +828,60 @@ function ShowPointsYBut() {
   ).textContent = `Points in diapason Y:[${startValue};${endValue}]`;
 
   const outputList = $("#output-list");
-  const filteredPoints = pointList.filter(
+  const filteredPoints = curvePoints.filter(
     (point) => point.y >= startValue && point.y <= endValue
   );
 
-  filteredPoints.forEach((point) => {
+  let countYLeft = parseFloat($("#diapasonY-step").value);
+  let step = 1;
+  const length = filteredPoints.length;
+  let lengthLeft = length;
+  if (lengthLeft === 0)
+    CreateMassageOutput(
+      "There is no points of Bezier's curve in given diapason."
+    );
+  else if (countYLeft === 1)
+    CreatePointOutput(filteredPoints[parseInt(lengthLeft / 2)]);
+  else {
+    for (let i = 1; i <= length && countYLeft > 0; i += step) {
+      CreatePointOutput(filteredPoints[i - 1]);
+      lengthLeft -= step;
+      countYLeft--;
+
+      step = parseInt(lengthLeft / countYLeft);
+      if (step === 0) {
+        CreateMassageOutput(`There is only ${length} points in this dispason`);
+        break;
+      }
+    }
+  }
+
+  document.querySelector(".modal-overlay").classList.add("show");
+  document.querySelector(".options-output").classList.add("show");
+
+  function CreatePointOutput(point) {
     const li = document.createElement("li");
     const colorCircle = document.createElement("span");
     colorCircle.style.display = "inline-block";
     colorCircle.style.width = "10px";
     colorCircle.style.height = "10px";
     colorCircle.style.borderRadius = "50%";
-    colorCircle.style.backgroundColor = point.color;
+    colorCircle.style.backgroundColor = "black";
     colorCircle.style.marginRight = "10px";
 
     li.appendChild(colorCircle);
-    li.appendChild(document.createTextNode(`Point: ${point.info}`));
+    li.appendChild(
+      document.createTextNode(
+        `Point: (X: ${point.x.toFixed(5)}, ` + `Y: ${point.y.toFixed(5)})`
+      )
+    );
     outputList.appendChild(li);
-  });
-
-  document.querySelector(".modal-overlay").classList.add("show");
-  document.querySelector(".options-output").classList.add("show");
+  }
+  function CreateMassageOutput(message) {
+    const p = document.createElement("p");
+    p.appendChild(document.createTextNode(message));
+    outputList.appendChild(p);
+  }
 }
 function CalculatePolinomsBut() {
   const iStartField = $("#diapasonI-start");
@@ -969,6 +1078,7 @@ function DrawCarcas(canvas, points, width = 0.3) {
 function DrawCurve(canvas, points, method, width = 1) {
   const curveColor = $("#curve-color").value;
 
+  curvePoints = [];
   method(canvas, points, width, curveColor);
 }
 
@@ -982,23 +1092,28 @@ function DrawLine(canvas, pStart, pEnd, width, color) {
   ctx.lineTo(pEnd.x, pEnd.y);
   ctx.stroke();
 }
-function ParamMethod(canvas, points, width, color, tD = 0.001) {
+function ParamMethod(canvas, points, width, color, tD = deltaT) {
   const n = points.length - 1;
   if (n <= 0) return;
 
   const tStart = 0;
   const tEnd = 1;
+  const EPS = tD / 10;
 
   let tCur = tStart;
   let tNext = tCur + tD;
-  while (tNext <= tEnd) {
-    const pStart = { x: Bx(tCur), y: By(tCur) };
-    const pEnd = { x: Bx(tNext), y: By(tNext) };
+  let pStart = { x: Bx(tCur), y: By(tCur) };
+  let pEnd = pStart;
+  while (tNext <= tEnd + EPS) {
+    pStart = pEnd;
+    pEnd = { x: Bx(tNext), y: By(tNext) };
+    curvePoints.push(CanvasToCoord(pStart.x, pStart.y));
 
     DrawLine(canvas, pStart, pEnd, width, color);
     tCur = tNext;
     tNext += tD;
   }
+  curvePoints.push(CanvasToCoord(pEnd.x, pEnd.y));
 
   function Bx(t) {
     let sum = 0;
@@ -1023,23 +1138,28 @@ function ParamMethod(canvas, points, width, color, tD = 0.001) {
     return PolynomBernshteina(i, n, t);
   }
 }
-function RecursiveMethod(canvas, points, width, color, tD = 0.001) {
+function RecursiveMethod(canvas, points, width, color, tD = deltaT) {
   const n = points.length - 1;
   if (n <= 0) return;
 
   const tStart = 0;
   const tEnd = 1;
+  const EPS = tD / 10;
 
   let tCur = tStart;
   let tNext = tCur + tD;
-  while (tNext <= tEnd) {
-    const pStart = { x: Bx(points, 0, n, tCur), y: By(points, 0, n, tCur) };
-    const pEnd = { x: Bx(points, 0, n, tNext), y: By(points, 0, n, tNext) };
+  let pStart = { x: Bx(points, 0, n, tCur), y: By(points, 0, n, tCur) };
+  let pEnd = pStart;
+  while (tNext <= tEnd + EPS) {
+    pStart = pEnd;
+    pEnd = { x: Bx(points, 0, n, tNext), y: By(points, 0, n, tNext) };
+    curvePoints.push(CanvasToCoord(pStart.x, pStart.y));
 
     DrawLine(canvas, pStart, pEnd, width, color);
     tCur = tNext;
     tNext += tD;
   }
+  curvePoints.push(CanvasToCoord(pEnd.x, pEnd.y));
 
   function Bx(points, iStart, iEnd, t) {
     if (iEnd === iStart) return ToCanvas(points[iStart].x, 0).x;
