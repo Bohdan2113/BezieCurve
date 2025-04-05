@@ -39,6 +39,7 @@ const deltaT = 0.01;
 
 let unitCount;
 let pointList = [];
+let outputPoints = [];
 let curvePoints = [];
 let draggedPoint = null; // Поточна точка, яку тягнемо
 let BezierCurveMethod = ParamMethod;
@@ -93,21 +94,24 @@ window.onload = function () {
 
   // Створення точок подвійним кліком
   canvas.addEventListener("dblclick", function (event) {
-    const { x, y } = ClickToCoord(event.clientX, event.clientY);
+    const canvas = $("#myCanvas");
+    const { x, y } = ClickToCoord(event.clientX, event.clientY, canvas);
     CreatePointDoubleClick(x, y);
   });
 
   // Перетягнення точок
   canvas.addEventListener("mousedown", (event) => {
     ToogleBlocks($(".points-container"), $("#addpoint-container"));
-    const hoverP = ClickToCoord(event.clientX, event.clientY);
-    draggedPoint = FindClosestPoint(hoverP, 0.2);
+    const canvas = $("#myCanvas");
+    const hoverP = ClickToCoord(event.clientX, event.clientY, canvas);
+    draggedPoint = FindClosestPoint(pointList, hoverP, 0.2);
   });
   canvas.addEventListener("mousemove", (event) => {
     if (!draggedPoint) return;
 
     // Оновлюємо координати точки
-    const { x, y } = ClickToCoord(event.clientX, event.clientY);
+    const canvas = $("#myCanvas");
+    const { x, y } = ClickToCoord(event.clientX, event.clientY, canvas);
     draggedPoint.x = x;
     draggedPoint.y = y;
     const draggedLiText = $(`#point-${draggedPoint.id} h3`);
@@ -125,32 +129,21 @@ window.onload = function () {
   canvas.addEventListener("contextmenu", (event) => {
     event.preventDefault(); // Відміна стандартного контекстного меню
 
-    const hoverP = ClickToCoord(event.clientX, event.clientY);
-    const closestPoint = FindClosestPoint(hoverP, 0.2);
+    const canvas = $("#myCanvas");
+    const hoverP = ClickToCoord(event.clientX, event.clientY, canvas);
+    const closestPoint = FindClosestPoint(pointList, hoverP, 0.2);
 
     DeletePoint(closestPoint.id);
   });
 
   // Перегляд інформації про точку
   canvas.addEventListener("mousemove", (event) => {
-    const hoverP = ClickToCoord(event.clientX, event.clientY);
-    const closePoint = FindClosestPoint(hoverP, 0.2);
-
-    if (closePoint) {
-      const infoPanel = $("#point-info-panel");
-      const { clientX, clientY } = event; // Отримуємо координати курсора
-      infoPanel.style.display = "block";
-      infoPanel.style.position = "absolute";
-      infoPanel.style.left = `${clientX + 10}px`; // Відступ від курсора
-      infoPanel.style.top = `${clientY + 10}px`; // Відступ від курсора
-      infoPanel.innerHTML = `
-      <p>${closePoint.coords}</p>
-      `;
-    } else {
-      const infoPanel = $("#point-info-panel");
-      infoPanel.style.display = "none";
-      infoPanel.innerHTML = "";
-    }
+    const canvas = $("#myCanvas");
+    ShowHooverPointInfo(canvas, event, pointList);
+  });
+  seeCanvas.addEventListener("mousemove", (event) => {
+    const seeCanvas = $("#seeCanvas");
+    ShowHooverPointInfo(seeCanvas, event, outputPoints);
   });
 
   // Зміна кольору кривої
@@ -200,8 +193,8 @@ function MethodChange(event) {
   Redraw();
 }
 
-function FindClosestPoint(clickP, radius) {
-  return pointList.find(
+function FindClosestPoint(points, clickP, radius) {
+  return points.find(
     (point) => Math.hypot(point.x - clickP.x, point.y - clickP.y) < radius
   );
 }
@@ -272,8 +265,7 @@ function ToCanvas(x, y) {
     y: centerY - y * unitSize,
   };
 }
-function ClickToCoord(x, y) {
-  const canvas = $("#myCanvas");
+function ClickToCoord(x, y, canvas) {
   const rect = canvas.getBoundingClientRect();
   const sideLength = canvas.height / 2 - coordSystemMargin;
   const unitSize = sideLength / (unitCount + 1);
@@ -293,6 +285,28 @@ function CanvasToCoord(x, y) {
     y: (canvas.height / 2 - y) / unitSize,
   };
 }
+function ShowHooverPointInfo(canvas, event, points) {
+  const hoverP = ClickToCoord(event.clientX, event.clientY, canvas);
+  const closePoint = FindClosestPoint(points, hoverP, 0.2);
+
+  if (closePoint) {
+    console.log(closePoint);
+    const infoPanel = $("#point-info-panel");
+    const { clientX, clientY } = event; // Отримуємо координати курсора
+    infoPanel.style.display = "block";
+    infoPanel.style.position = "absolute";
+    infoPanel.style.left = `${clientX + 10}px`; // Відступ від курсора
+    infoPanel.style.top = `${clientY + 10}px`; // Відступ від курсора
+    infoPanel.style.zIndex = "1000";
+    infoPanel.innerHTML = `
+    <p>(X: ${closePoint.x}, Y: ${closePoint.y})</p>
+    `;
+  } else {
+    const infoPanel = $("#point-info-panel");
+    infoPanel.style.display = "none";
+    infoPanel.innerHTML = "";
+  }
+}
 
 function ToogleBlocks(block1, block2) {
   block1.style.display = "flex";
@@ -311,6 +325,7 @@ function OutputCanvasClose() {
   $(".curve-output").classList.remove("show");
 
   ClearCanvas($("#seeCanvas"));
+  outputPoints = [];
 }
 
 function ClearAllBut() {
@@ -340,6 +355,7 @@ function ClearWork() {
 function ClearCanvas(canvas) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  curvePoints = [];
 }
 function ClearmethodChoose() {
   const paramMethod = document.getElementById("params-method");
@@ -823,15 +839,16 @@ function ShowPointsYBut() {
     }
   }
 
-  $(
-    ".modal-overlay h3"
-  ).textContent = `Points in diapason Y:[${startValue};${endValue}]`;
-
-  const outputList = $("#output-list");
+  // arrays for points
   const filteredPoints = curvePoints.filter(
     (point) => point.y >= startValue && point.y <= endValue
   );
+  for (let i = 0; i < filteredPoints.length; i++) {
+    filteredPoints[i].x = Math.round(filteredPoints[i].x * 1000) / 1000;
+    filteredPoints[i].y = Math.round(filteredPoints[i].y * 1000) / 1000;
+  }
 
+  // define needed points
   let countYLeft = parseFloat($("#diapasonY-step").value);
   let step = 1;
   const length = filteredPoints.length;
@@ -844,7 +861,7 @@ function ShowPointsYBut() {
     CreatePointOutput(filteredPoints[parseInt(lengthLeft / 2)]);
   else {
     for (let i = 1; i <= length && countYLeft > 0; i += step) {
-      CreatePointOutput(filteredPoints[i - 1]);
+      outputPoints.push(filteredPoints[i - 1]);
       lengthLeft -= step;
       countYLeft--;
 
@@ -856,8 +873,22 @@ function ShowPointsYBut() {
     }
   }
 
-  document.querySelector(".modal-overlay").classList.add("show");
-  document.querySelector(".options-output").classList.add("show");
+  // // output points in modal window
+  // const outputList = $("#output-list");
+  // $(
+  //   ".modal-overlay h3"
+  // ).textContent = `Points in diapason Y:[${startValue};${endValue}]`;
+  // outputPoints.forEach((point) => CreatePointOutput(point));
+  // document.querySelector(".modal-overlay").classList.add("show");
+  // document.querySelector(".options-output").classList.add("show");
+
+  // output points in canvas
+  const seeCanvas = $("#seeCanvas");
+  DrawCoords(seeCanvas, unitCount);
+  DrawCurve(seeCanvas, pointList, BezierCurveMethod);
+  DrawPoints(seeCanvas, outputPoints, 2, "red");
+  $(".modal-overlay-canvas").classList.add("show");
+  $(".curve-output").classList.add("show");
 
   function CreatePointOutput(point) {
     const li = document.createElement("li");
@@ -1050,7 +1081,7 @@ function Redraw() {
   DrawCarcas(canvas, pointList);
   DrawCurve(canvas, pointList, BezierCurveMethod);
 }
-function DrawPoints(canvas, points, r = 4) {
+function DrawPoints(canvas, points, r = 4, color = "#000000") {
   // Get canvas context
   const ctx = canvas.getContext("2d");
 
@@ -1059,8 +1090,8 @@ function DrawPoints(canvas, points, r = 4) {
 
     // Draw point
     ctx.beginPath();
-    ctx.strokeStyle = p.color;
-    ctx.fillStyle = p.color;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.arc(x, y, r, 0, 2 * Math.PI, (anticlockwise = false));
     ctx.stroke();
     ctx.fill();
